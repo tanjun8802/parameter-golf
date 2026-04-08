@@ -601,7 +601,7 @@ class Int4ShiftAddLinear(nn.Module):
         for i, (bit_mat, sign) in enumerate(zip(bits, signs)):
             result = result + sign * F.linear(x, bit_mat.to(x.dtype))
         # Apply per-weight scales (averaged per output channel).
-        row_scales = (self.scales * 1.0).mean(dim=1)   # (out_features,)
+        row_scales = self.scales.float().mean(dim=1)   # (out_features,)
         result = result * row_scales.to(x.dtype)
         return result
 
@@ -850,7 +850,7 @@ class DistributedTokenLoader:
 # -----------------------------
 
 class RMSNorm(nn.Module):
-    def __init__(self, eps: float | None = None):
+    def __init__(self, eps: Optional[float] = None):
         super().__init__()
         self.eps = eps
 
@@ -893,8 +893,8 @@ class Rotary(nn.Module):
         inv_freq = 1.0 / (base ** (torch.arange(0, dim, 2, dtype=torch.float32) / dim))
         self.register_buffer("inv_freq", inv_freq, persistent=False)
         self._seq_len_cached = 0
-        self._cos_cached: Tensor | None = None
-        self._sin_cached: Tensor | None = None
+        self._cos_cached: Optional[Tensor] = None
+        self._sin_cached: Optional[Tensor] = None
 
     def forward(self, seq_len: int, device: torch.device, dtype: torch.dtype):
         if (self._cos_cached is None or self._seq_len_cached != seq_len
@@ -1261,7 +1261,7 @@ def main() -> None:
     log0(f"optuna_n_trials:{args.optuna_n_trials} prune_range:[{args.prune_sparsity_min},{args.prune_sparsity_max}]")
 
     # ---- EMA SHADOW MODEL ----
-    ema_model: nn.Module | None = None
+    ema_model: Optional[nn.Module] = None
     if args.ema_decay > 0:
         ema_model = copy.deepcopy(base_model).cpu()
         ema_model.eval()
@@ -1325,7 +1325,7 @@ def main() -> None:
 
     # ---- MAIN TRAINING LOOP ----
     training_time_ms = 0.0
-    stop_after_step: int | None = None
+    stop_after_step: Optional[int] = None
     swa_accum: list[dict[str, Tensor]] = []
     qat_active = False
 
